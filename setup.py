@@ -15,9 +15,9 @@ setup(
     version='1.6.0',
     description=("instagram-scraper is a command-line application written in Python"
                  " that scrapes and downloads an instagram user\'s photos and videos. Use responsibly."),
-    url='https://github.com/chmsant/instagram-scraper',
-    download_url='https://github.com/chmsant/instagram-scraper/tarball/1.6.0',
-    author='Original by Richard Arcega. This fork by Christopher Sant',
+    url='https://github.com/rarcega/instagram-scraper',
+    download_url='https://github.com/rarcega/instagram-scraper/tarball/1.6.0',
+    author='Richard Arcega',
     author_email='hello@richardarcega.com',
     license='Public domain',
     packages=find_packages(exclude=['tests']),
