@@ -12,7 +12,7 @@ if sys.version_info < (3, 2):
 
 setup(
     name='instagram-scraper',
-    version='1.6.0',
+    version='1.6.1',
     description=("instagram-scraper is a command-line application written in Python"
                  " that scrapes and downloads an instagram user\'s photos and videos. Use responsibly.  Forked from rarcega/instagram-scraper"),
     url='https://github.com/chmsant/instagram-scraper',
