@@ -83,13 +83,13 @@ class InstagramScraper(object):
         default_attr = dict(username='', usernames=[], filename=None,
                             login_user=None, login_pass=None,
                             followings_input=False, followings_output='profiles.txt',
-                            destination='./', retain_username=False, interactive=False,
+                            destination='./', logger=None, retain_username=False, interactive=False,
                             quiet=False, maximum=0, media_metadata=False, profile_metadata=False, latest=False,
                             latest_stamps=False, cookiejar=None,
                             media_types=['image', 'video', 'story-image', 'story-video'],
                             tag=False, location=False, search_location=False, comments=False,
                             verbose=0, include_location=False, filter=None, proxies={}, no_check_certificate=False,
-                                                        template='{urlname}')
+                                                        template='{urlname}', log_destination='')
 
         allowed_attr = list(default_attr.keys())
         default_attr.update(kwargs)
@@ -116,7 +116,8 @@ class InstagramScraper(object):
             self.latest = True
 
         # Set up a logger
-        self.logger = InstagramScraper.get_logger(level=logging.DEBUG, verbose=default_attr.get('verbose'))
+        if self.logger is None:
+            self.logger = InstagramScraper.get_logger(level=logging.DEBUG, dest=default_attr.get('log_destination'), verbose=default_attr.get('verbose'))
 
         self.posts = []
 
@@ -230,7 +231,7 @@ class InstagramScraper(object):
 
         self.session.headers.update({'X-CSRFToken': req.cookies['csrftoken']})
 
-        self.session.headers = {'user-agent': CHROME_WIN_UA}
+        self.session.headers.update({'user-agent': CHROME_WIN_UA})
         self.rhx_gis = ""
         self.authenticated = True
 
@@ -250,7 +251,7 @@ class InstagramScraper(object):
         if login_text.get('authenticated') and login.status_code == 200:
             self.authenticated = True
             self.logged_in = True
-            self.session.headers = {'user-agent': CHROME_WIN_UA}
+            self.session.headers.update({'user-agent': CHROME_WIN_UA})
             self.rhx_gis = ""
         else:
             self.logger.error('Login failed for ' + self.login_user)
@@ -610,7 +611,7 @@ class InstagramScraper(object):
 
     def scrape(self, executor=concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_DOWNLOADS)):
         """Crawls through and downloads user's media"""
-        self.session.headers = {'user-agent': STORIES_UA}
+        self.session.headers.update({'user-agent': STORIES_UA})
         try:
             for username in self.usernames:
                 self.posts = []
@@ -1156,8 +1157,8 @@ class InstagramScraper(object):
 
         if data:
             merged = data
-            with open(dst, 'r') as f:
-                file_data = json.load(f)
+            with open(dst, 'rb') as f:
+                file_data = json.load(codecs.getreader('utf-8')(f))
                 key = list(merged.keys())[0]
                 if key in file_data:
                     merged[key] = file_data[key]
@@ -1168,23 +1169,24 @@ class InstagramScraper(object):
         """Saves the data to a json file."""
         if not os.path.exists(os.path.dirname(dst)):
             os.makedirs(os.path.dirname(dst))
-
+            
         if data:
             output_list = {}
             if os.path.exists(dst):
                 with open(dst, "rb") as f:
-                    output_list.update(json.load(f))
+                    output_list.update(json.load(codecs.getreader('utf-8')(f)))
 
             with open(dst, 'wb') as f:
                 output_list.update(data)
                 json.dump(output_list, codecs.getwriter('utf-8')(f), indent=4, sort_keys=True, ensure_ascii=False)
 
     @staticmethod
-    def get_logger(level=logging.DEBUG, verbose=0):
+    def get_logger(level=logging.DEBUG, dest='', verbose=0):
         """Returns a logger."""
         logger = logging.getLogger(__name__)
 
-        fh = logging.FileHandler('instagram-scraper.log', 'w')
+        dest +=  '/' if (dest !=  '') and dest[-1] != '/' else ''
+        fh = logging.FileHandler(dest + 'instagram-scraper.log', 'w')
         fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         fh.setLevel(level)
         logger.addHandler(fh)
@@ -1329,6 +1331,7 @@ def main():
                         help='Retry download attempts endlessly when errors are received')
     parser.add_argument('--verbose', '-v', type=int, default=0, help='Logging verbosity level')
     parser.add_argument('--template', '-T', type=str, default='{urlname}', help='Customize filename template')
+    parser.add_argument('--log_destination', '-l', type=str, default='', help='destination folder for the instagram-scraper.log file')
 
     args = parser.parse_args()
 
@@ -1362,6 +1365,8 @@ def main():
     if args.retry_forever:
         global MAX_RETRIES
         MAX_RETRIES = sys.maxsize
+
+    
 
     scraper = InstagramScraper(**vars(args))
 
